@@ -1,0 +1,23 @@
+FROM php:8.3-fpm-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    bash git curl icu-dev oniguruma-dev libzip-dev \
+    libpng-dev libjpeg-turbo-dev freetype-dev zlib-dev \
+    shadow
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) intl bcmath pdo pdo_mysql mbstring zip gd
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Map www-data to your host uid/gid for nicer file permissions
+RUN usermod -u 1000 www-data || true && groupmod -g 1000 www-data || true
+
+# Dev php config
+COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini

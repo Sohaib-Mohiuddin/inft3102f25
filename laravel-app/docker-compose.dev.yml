@@ -1,0 +1,58 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: laravel-php
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    # Run Laravel's PHP dev server on 0.0.0.0:8000
+    command: sh -lc "composer install && php artisan key:generate --force && php artisan serve --host=0.0.0.0 --port=8000"
+    ports:
+      - "8000:8000"
+    networks:
+      - nginx_network
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+    depends_on:
+      - db
+
+  node:
+    image: node:20-alpine
+    container_name: laravel-node
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+    # Vite dev server as your primary entry point
+    command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    networks:
+      - nginx_network
+    depends_on:
+      - php
+
+  db:
+    image: mariadb:11
+    container_name: laravel-db
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - nginx_network
+
+volumes:
+  db_data:
+
+networks:
+  nginx_network:
+    external: true
